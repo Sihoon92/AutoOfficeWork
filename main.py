@@ -6,16 +6,14 @@
   python main.py "2월 1일부터 20일까지 배치 수 알려줘"  # 단일 질문
 """
 import sys
-from src.agent import build_agent, run
+from src.agent import run
 
 
 def main():
-    agent = build_agent()
-
     # 단일 질문 모드
     if len(sys.argv) > 1:
         question = " ".join(sys.argv[1:])
-        print(run(question, agent))
+        print(run(question))
         return
 
     # 대화 루프 모드
@@ -31,7 +29,7 @@ def main():
         if not question:
             continue
 
-        answer = run(question, agent)
+        answer = run(question)
         print(f"\n답변: {answer}\n")
 
 
