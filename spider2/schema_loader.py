@@ -88,46 +88,63 @@ def find_sqlite_db(db_dir: str | Path, db_id: str) -> Path | None:
     """
     Spider 2.0-Lite 디렉토리 구조에서 db_id에 해당하는 SQLite 파일을 탐색.
 
-    실제 Spider 2.0-Lite 구조:
-        {db_dir}/{db_id}/{db_id}.sqlite  또는
+    Spider 2.0-Lite는 SQLite DB를 두 가지 구조로 배포한다:
+
+    [구조 A] flat 구조 — spider2-localdb/ 에 .sqlite 파일이 바로 위치
+        {db_dir}/{db_id}.sqlite
+
+    [구조 B] 서브폴더 구조 — 폴더 내에 .sqlite 파일 위치
+        {db_dir}/{db_id}/{db_id}.sqlite
         {db_dir}/{db_id}/*.sqlite
 
     탐색 우선순위:
-        1. 정확한 이름 매칭: {db_dir}/{db_id}/{db_id}.sqlite|.db
-        2. 와일드카드:       {db_dir}/{db_id}/*.sqlite|.db
-        3. 대소문자 무시:    폴더명이 db_id와 대소문자만 다를 경우도 처리
+        1. flat 정확 매칭:  {db_dir}/{db_id}.sqlite|.db
+        2. 서브폴더 매칭:   {db_dir}/{db_id}/{db_id}.sqlite|.db
+        3. 서브폴더 와일드: {db_dir}/{db_id}/*.sqlite|.db
+        4. 대소문자 무시:   위 1~3을 case-insensitive로 재탐색
 
     Returns:
         Path 또는 None (파일을 찾지 못한 경우)
     """
     db_dir = Path(db_dir)
+    db_id_lower = db_id.lower()
 
-    # 정확한 이름 매칭
-    db_subdir = db_dir / db_id
-    if db_subdir.is_dir():
-        for name in (f"{db_id}.sqlite", f"{db_id}.db"):
-            p = db_subdir / name
+    def _search_in(base: Path, stem: str) -> Path | None:
+        """base 디렉토리 기준으로 flat → 서브폴더 순서로 탐색"""
+        # flat: base/{stem}.sqlite
+        for ext in (".sqlite", ".db"):
+            p = base / f"{stem}{ext}"
             if p.exists():
                 return p
-        for ext in ("*.sqlite", "*.db"):
-            matches = sorted(db_subdir.glob(ext))
-            if matches:
-                return matches[0]
+        # 서브폴더 exact
+        subdir = base / stem
+        if subdir.is_dir():
+            for ext in (".sqlite", ".db"):
+                p = subdir / f"{stem}{ext}"
+                if p.exists():
+                    return p
+            for pattern in ("*.sqlite", "*.db"):
+                matches = sorted(subdir.glob(pattern))
+                if matches:
+                    return matches[0]
+        return None
 
-    # 대소문자 무시 폴더 탐색
-    # (Spider 2.0-Lite의 sqlite 폴더명은 대문자 포함: AdventureWorks 등)
-    db_id_lower = db_id.lower()
+    # 1순위: 정확한 이름으로 탐색
+    result = _search_in(db_dir, db_id)
+    if result:
+        return result
+
+    # 2순위: 대소문자 무시 탐색 (db_dir 내 모든 항목 순회)
     if db_dir.is_dir():
-        for subdir in db_dir.iterdir():
-            if subdir.is_dir() and subdir.name.lower() == db_id_lower:
-                for name in (f"{subdir.name}.sqlite", f"{subdir.name}.db",
-                             f"{db_id}.sqlite", f"{db_id}.db"):
-                    p = subdir / name
-                    if p.exists():
-                        return p
-                for ext in ("*.sqlite", "*.db"):
-                    matches = sorted(subdir.glob(ext))
-                    if matches:
-                        return matches[0]
+        for item in db_dir.iterdir():
+            if item.name.lower() == db_id_lower:
+                # flat case: item 자체가 파일일 수도 있음
+                if item.is_file() and item.suffix in (".sqlite", ".db"):
+                    return item
+                # 서브폴더 case
+                if item.is_dir():
+                    result = _search_in(db_dir, item.name)
+                    if result:
+                        return result
 
     return None
