@@ -88,30 +88,46 @@ def find_sqlite_db(db_dir: str | Path, db_id: str) -> Path | None:
     """
     Spider 2.0-Lite 디렉토리 구조에서 db_id에 해당하는 SQLite 파일을 탐색.
 
-    탐색 경로 우선순위:
-        1. {db_dir}/{db_id}/{db_id}.sqlite
-        2. {db_dir}/{db_id}/{db_id}.db
-        3. {db_dir}/{db_id}/*.sqlite (첫 번째 파일)
-        4. {db_dir}/{db_id}/*.db    (첫 번째 파일)
+    실제 Spider 2.0-Lite 구조:
+        {db_dir}/{db_id}/{db_id}.sqlite  또는
+        {db_dir}/{db_id}/*.sqlite
+
+    탐색 우선순위:
+        1. 정확한 이름 매칭: {db_dir}/{db_id}/{db_id}.sqlite|.db
+        2. 와일드카드:       {db_dir}/{db_id}/*.sqlite|.db
+        3. 대소문자 무시:    폴더명이 db_id와 대소문자만 다를 경우도 처리
 
     Returns:
         Path 또는 None (파일을 찾지 못한 경우)
     """
     db_dir = Path(db_dir)
+
+    # 정확한 이름 매칭
     db_subdir = db_dir / db_id
+    if db_subdir.is_dir():
+        for name in (f"{db_id}.sqlite", f"{db_id}.db"):
+            p = db_subdir / name
+            if p.exists():
+                return p
+        for ext in ("*.sqlite", "*.db"):
+            matches = sorted(db_subdir.glob(ext))
+            if matches:
+                return matches[0]
 
-    candidates = [
-        db_subdir / f"{db_id}.sqlite",
-        db_subdir / f"{db_id}.db",
-    ]
-    for path in candidates:
-        if path.exists():
-            return path
-
-    # 와일드카드 탐색
-    for ext in ("*.sqlite", "*.db"):
-        matches = list(db_subdir.glob(ext))
-        if matches:
-            return matches[0]
+    # 대소문자 무시 폴더 탐색
+    # (Spider 2.0-Lite의 sqlite 폴더명은 대문자 포함: AdventureWorks 등)
+    db_id_lower = db_id.lower()
+    if db_dir.is_dir():
+        for subdir in db_dir.iterdir():
+            if subdir.is_dir() and subdir.name.lower() == db_id_lower:
+                for name in (f"{subdir.name}.sqlite", f"{subdir.name}.db",
+                             f"{db_id}.sqlite", f"{db_id}.db"):
+                    p = subdir / name
+                    if p.exists():
+                        return p
+                for ext in ("*.sqlite", "*.db"):
+                    matches = sorted(subdir.glob(ext))
+                    if matches:
+                        return matches[0]
 
     return None
