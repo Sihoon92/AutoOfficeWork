@@ -3,12 +3,18 @@ import argparse
 import glob
 from utils import get_table_info, initialize_logger, get_dictionary
 from agent import REFORCE, schema_linking
-from chat import GPTChat
+from chat import GPTChat, _default_model
 from prompt import Prompts
 import threading
 import concurrent.futures
 from sql import SqlEnv
 import time
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Global args and shared state (set in __main__)
 args = None
@@ -156,8 +162,8 @@ if __name__ == '__main__':
     parser.add_argument('--task', type=str, default="snow", choices=["snow", "lite"], help="Dataset type: 'snow' for Snowflake, 'lite' for SQLite")
     parser.add_argument('--db_path', type=str, default="examples", help="Path to examples directory")
     parser.add_argument('--output_path', type=str, default="output/o1-preview-snow-log", help="Path to save output results")
-    parser.add_argument('--model', type=str, default="o1-preview", help="Main model name")
-    parser.add_argument('--pre_model', type=str, default="o1-preview", help="Pre-processing model name")
+    parser.add_argument('--model', type=str, default=_default_model(), help="Main model name (default: LLM_MODEL env var)")
+    parser.add_argument('--pre_model', type=str, default=_default_model(), help="Pre-processing model name (default: LLM_MODEL env var)")
     parser.add_argument('--azure', action="store_true", help="Use Azure OpenAI instead of OpenAI")
     parser.add_argument('--schema_linking_model', type=str, default=None, help="Model for schema linking (optional)")
     parser.add_argument('--schema_linking_only', action="store_true", help="Run schema linking only, skip main inference")

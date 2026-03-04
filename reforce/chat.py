@@ -3,32 +3,59 @@ from utils import extract_all_blocks
 import os
 import sys
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed; rely on shell environment
+
+
+def _default_model():
+    """Return the model name from env, falling back to gpt-4o."""
+    return os.environ.get("LLM_MODEL", "gpt-4o")
+
+
+def _build_client(azure=False, model=None):
+    """Build an OpenAI-compatible client.
+
+    Priority:
+      1. Internal API  — LLM_BASE_URL + LLM_API_KEY are set in .env
+      2. Azure OpenAI  — azure=True flag
+      3. OpenAI        — standard OPENAI_API_KEY
+    """
+    llm_base_url = os.environ.get("LLM_BASE_URL")
+    llm_api_key = os.environ.get("LLM_API_KEY")
+
+    if llm_base_url and llm_api_key:
+        # OpenAI-compatible internal API
+        return OpenAI(
+            base_url=llm_base_url,
+            api_key=llm_api_key,
+        )
+
+    if azure:
+        api_version = "2024-12-01-preview" if model in ["o1-preview", "o1-mini"] else None
+        kwargs = dict(
+            azure_endpoint=os.environ.get("AZURE_ENDPOINT"),
+            api_key=os.environ.get("AZURE_OPENAI_KEY"),
+        )
+        if api_version:
+            kwargs["api_version"] = api_version
+        return AzureOpenAI(**kwargs)
+
+    # Standard OpenAI
+    kwargs = dict(api_key=os.environ.get("OPENAI_API_KEY"))
+    if model in ["o1-preview", "o1-mini"]:
+        kwargs["api_version"] = "2024-12-01-preview"
+    return OpenAI(**kwargs)
+
 
 class GPTChat:
-    def __init__(self, azure=False, model="gpt-4o", temperature=1) -> None:
-        if not azure:
-            if model in ["o1-preview", "o1-mini"]:
-                self.client = OpenAI(
-                    api_key=os.environ.get("OPENAI_API_KEY"),
-                    api_version="2024-12-01-preview"
-                )
-            else:
-                self.client = OpenAI(
-                    api_key=os.environ.get("OPENAI_API_KEY"),
-                )
-        else:
-            if model in ["o1-preview", "o1-mini"]:
-                self.client = AzureOpenAI(
-                    azure_endpoint=os.environ.get("AZURE_ENDPOINT"),
-                    api_key=os.environ.get("AZURE_OPENAI_KEY"),
-                    api_version="2024-12-01-preview"
-                )
-            else:
-                self.client = AzureOpenAI(
-                    azure_endpoint=os.environ.get("AZURE_ENDPOINT"),
-                    api_key=os.environ.get("AZURE_OPENAI_KEY"),
-                )
+    def __init__(self, azure=False, model=None, temperature=1) -> None:
+        if model is None:
+            model = _default_model()
 
+        self.client = _build_client(azure=azure, model=model)
         self.messages = []
         self.model = model
         self.temperature = float(temperature)
