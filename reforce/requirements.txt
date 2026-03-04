@@ -1,0 +1,25 @@
+# ReFoRCE core dependencies
+openai==1.56.0
+pandas==2.2.3
+numpy==2.1.3
+tqdm==4.67.1
+
+# SQLite support is built into Python's standard library
+
+# Optional: Snowflake support (uncomment if using Snowflake)
+# snowflake-connector-python==3.12.0
+
+# Optional: BigQuery support (uncomment if using BigQuery)
+# google-cloud-bigquery==3.18.0
+
+# Optional: DuckDB support
+# duckdb==1.0.0
+
+# Optional: spaCy for NLP utilities
+# spacy==3.8.4
+
+# Optional: visualization
+# matplotlib==3.10.0
+
+# Optional: file download
+# gdown==5.2.0
