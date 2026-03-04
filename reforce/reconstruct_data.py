@@ -134,10 +134,26 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                                     with open(project_name_path) as f:
                                         external_knowledge = f.read()
             else:
-                for sqlite in os.listdir(entry1_path):
-                    if sqlite.endswith(".sqlite"):
-                        sqlite_path = os.path.join(entry1_path, sqlite)
-                        table_names, prompts = get_sqlite_data(sqlite_path, add_description=add_description, add_sample_rows=add_sample_rows)
+                # local_ 항목: .sqlite 파일 우선, 없으면 JSON 파일 fallback (spider2-lite 구조)
+                sqlite_path = None
+                for fname in os.listdir(entry1_path):
+                    if fname.endswith(".sqlite") or fname.endswith(".db"):
+                        sqlite_path = os.path.join(entry1_path, fname)
+                        break
+
+                if sqlite_path:
+                    # .sqlite 파일이 있으면 PRAGMA로 스키마 읽기
+                    table_names, prompts = get_sqlite_data(
+                        sqlite_path, add_description=add_description, add_sample_rows=add_sample_rows
+                    )
+                else:
+                    # .sqlite 없음 → 서브폴더의 JSON 파일로 prompts.txt 생성 (spider2-lite 방식)
+                    table_names, prompts = get_local_data_from_json(
+                        entry1_path, add_description=add_description, add_sample_rows=add_sample_rows
+                    )
+                    if not table_names:
+                        print(f"[WARN] {entry}: .sqlite 파일도 JSON 파일도 없음, prompts.txt 생략")
+                        continue
         with open(os.path.join(entry1_path, "prompts.txt"), "w") as f:
             if len(prompts) > 200000:
                 print(f"{entry} len: {len(prompts)}")
@@ -192,6 +208,63 @@ def get_sqlite_data(path, add_description=False, add_sample_rows=False):
             if add_sample_rows:
                 prompts += "Sample rows:\n" + hard_cut(table_json["sample_rows"], length=1000) + "\n"
     connection.close()
+    return table_names, prompts
+
+
+def get_local_data_from_json(entry_path, add_description=False, add_sample_rows=False):
+    """local_ 항목에서 .sqlite 파일 없이 JSON 메타데이터로 prompts.txt 생성.
+
+    spider2-lite 구조: examples/{instance_id}/{db_name}/*.json
+    JSON 포맷 (all_star.json 예시):
+        {
+            "table_name": "all_star",
+            "table_fullname": "all_star",
+            "column_names": [...],
+            "column_types": [...],
+            "description": [...],
+            "sample_rows": [{"col": "val", ...}, ...]
+        }
+    """
+    table_names = []
+    prompts = ''
+
+    # 서브폴더 탐색 (예: examples/local003/Baseball/)
+    for db_dir_name in os.listdir(entry_path):
+        db_dir_path = os.path.join(entry_path, db_dir_name)
+        if not os.path.isdir(db_dir_path):
+            continue
+
+        json_files = [f for f in os.listdir(db_dir_path) if f.endswith('.json')]
+        if not json_files:
+            continue
+
+        for json_file in sorted(json_files):
+            json_path = os.path.join(db_dir_path, json_file)
+            try:
+                with open(json_path, encoding="utf-8") as f:
+                    table_json = json.load(f)
+            except Exception as e:
+                print(f"[WARN] JSON 읽기 실패 {json_path}: {e}")
+                continue
+
+            table_name = table_json.get("table_fullname") or table_json.get("table_name", json_file[:-5])
+            col_names = table_json.get("column_names", [])
+            col_types = table_json.get("column_types", [])
+            descriptions = table_json.get("description", [""] * len(col_names))
+            sample_rows = table_json.get("sample_rows", [])
+
+            table_names.append(table_name)
+            prompts += "\n" + "-" * 50 + "\n"
+            prompts += "Table full name: " + table_name + "\n"
+
+            for j in range(len(col_names)):
+                table_des = ''
+                if add_description and j < len(descriptions) and descriptions[j]:
+                    table_des = " Description: " + str(descriptions[j])
+                prompts += "Column name: " + col_names[j] + " Type: " + (col_types[j] if j < len(col_types) else "TEXT") + table_des + "\n"
+                if add_sample_rows and sample_rows:
+                    prompts += "Sample rows:\n" + hard_cut(str(sample_rows), length=1000) + "\n"
+
     return table_names, prompts
 
 
