@@ -154,17 +154,17 @@ def compress_ddl(example_folder, add_description=False, add_sample_rows=False, r
                     if not table_names:
                         print(f"[WARN] {entry}: .sqlite 파일도 JSON 파일도 없음, prompts.txt 생략")
                         continue
-        with open(os.path.join(entry1_path, "prompts.txt"), "w") as f:
-            if len(prompts) > 200000:
-                print(f"{entry} len: {len(prompts)}")
-                prompts = clear_description(prompts)
-                print(f"cleared len: {len(prompts)}")
-            prompts += f"External knowledge that might be helpful: \n{external_knowledge}\n"
-            if not entry.startswith("local"):
-                prompts += "The table structure information is ({database name: {schema name: [table name]}}): \n" + str(table_dict) + "\n"
-            else:
-                prompts += "The table structure information is (table names): \n" + str(table_names) + "\n"
-            f.writelines(prompts)
+            with open(os.path.join(entry1_path, "prompts.txt"), "w") as f:
+                if len(prompts) > 200000:
+                    print(f"{entry} len: {len(prompts)}")
+                    prompts = clear_description(prompts)
+                    print(f"cleared len: {len(prompts)}")
+                prompts += f"External knowledge that might be helpful: \n{external_knowledge}\n"
+                if not entry.startswith("local"):
+                    prompts += "The table structure information is ({database name: {schema name: [table name]}}): \n" + str(table_dict) + "\n"
+                else:
+                    prompts += "The table structure information is (table names): \n" + str(table_names) + "\n"
+                f.writelines(prompts)
 
 
 def get_sqlite_data(path, add_description=False, add_sample_rows=False):
