@@ -188,7 +188,7 @@ def matching_at_same_position(s1, s2):
 def get_dictionary(args):
     json_path = os.path.join(args.db_path, f"spider2-{args.task}.jsonl")
     task_dict = {}
-    with open(json_path) as f:
+    with open(json_path, encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if not line:
