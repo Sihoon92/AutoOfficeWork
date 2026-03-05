@@ -149,6 +149,13 @@ def main(args_in):
     global args, prompt_all, dictionaries, task_dict
     args = args_in
 
+    if args.task_id:
+        if args.task_id not in task_dict:
+            print(f"Error: task_id '{args.task_id}' not found in dictionary.")
+            return
+        dictionaries = [args.task_id]
+        task_dict = {args.task_id: task_dict[args.task_id]}
+
     if args.schema_linking_model:
         chat_session_sl = GPTChat(args.azure, args.schema_linking_model, temperature=args.temperature)
         schema_linking(dictionaries, task_dict, args.db_path, chat_session_sl)
@@ -178,6 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_all_results', action="store_true", help="Save all intermediate results")
     parser.add_argument('--rerun', action="store_true", help="Rerun tasks that have no result yet without overwriting")
     parser.add_argument('--num_workers', type=int, default=16, help="Number of parallel worker threads")
+    parser.add_argument('--task_id', type=str, default=None, help="단일 태스크만 실행 (예: --task_id local01)")
 
     args = parser.parse_args()
     prompt_all = Prompts()
