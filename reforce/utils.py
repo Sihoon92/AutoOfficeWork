@@ -190,13 +190,22 @@ def get_dictionary(args):
     task_dict = {}
     with open(json_path) as f:
         for line in f:
+            line = line.strip()
+            if not line:
+                continue
             line_js = json.loads(line)
             if args.task == "snow":
                 task_dict[line_js['instance_id']] = line_js['instruction']
             elif args.task == "lite":
                 task_dict[line_js['instance_id']] = line_js['question']
 
-    dictionaries = [entry for entry in os.listdir(args.db_path) if os.path.isdir(os.path.join(args.db_path, entry))]
+    # task_dict에 있는 instance_id 중 examples/ 에 실제 폴더가 있는 것만 처리
+    # → 폴더는 있지만 jsonl에 없는 경우(KeyError) 방지
+    all_dirs = set(
+        entry for entry in os.listdir(args.db_path)
+        if os.path.isdir(os.path.join(args.db_path, entry))
+    )
+    dictionaries = [inst_id for inst_id in task_dict if inst_id in all_dirs]
     return dictionaries, task_dict
 
 
