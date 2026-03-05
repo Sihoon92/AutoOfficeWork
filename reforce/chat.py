@@ -6,8 +6,9 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from utils import extract_all_blocks
 
 try:
+    from pathlib import Path
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 except ImportError:
     pass
 

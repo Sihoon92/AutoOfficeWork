@@ -11,8 +11,9 @@ from sql import SqlEnv
 import time
 
 try:
+    from pathlib import Path
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 except ImportError:
     pass
 
