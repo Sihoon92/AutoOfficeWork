@@ -111,11 +111,19 @@ class REFORCE:
         prompt = f"Input sql:\n{sql}\nThe error information is:\n" + str(error) + "\nPlease correct it based on previous context and output the thinking process with only one sql query in ```sql``` format. Don't just analyze without SQL or output several SQLs.\n"
         if simplify:
             prompt += "Since the output is empty, please simplify some conditions of the past sql.\n"
-        response = self.chat_session_pre.get_model_response(prompt, "sql")
+        try:
+            response = self.chat_session_pre.get_model_response(prompt, "sql")
+        except Exception as e:
+            print(f"{self.sql_id}: LLM call failed in self_correct: {e}")
+            return []
 
         max_try = self.max_try
         while max_try > 0 and (not isinstance(response, str) or len(response) > 1):
-            response = self.chat_session_pre.get_model_response("Please generate only one SQL with thinking process.", "sql")
+            try:
+                response = self.chat_session_pre.get_model_response("Please generate only one SQL with thinking process.", "sql")
+            except Exception as e:
+                print(f"{self.sql_id}: LLM call failed in self_correct retry: {e}")
+                break
             max_try -= 1
         logger.info("[Corrected SQL]\n" + self.chat_session_pre.messages[-1]['content'] + "\n[Corrected SQL]")
         return response
@@ -132,7 +140,12 @@ class REFORCE:
         while max_try > 0:
             exploration_prompt = task + self.prompt_class.get_exploration_prompt(self.api, table_struct)
 
-            response_pre = self.chat_session_pre.get_model_response(exploration_prompt, "sql")
+            try:
+                response_pre = self.chat_session_pre.get_model_response(exploration_prompt, "sql")
+            except Exception as e:
+                print(f"{self.sql_id}: LLM call failed in exploration: {e}")
+                max_try -= 1
+                continue
             response_pre_txt = self.chat_session_pre.messages[-1]['content']
             logger.info("[Exploration]\n" + response_pre_txt + "\n[Exploration]")
             if not isinstance(response_pre, list):
@@ -178,8 +191,13 @@ class REFORCE:
             logger.info("[Self-refine]\n" + self_refine_prompt + "\n[Self-refine]")
 
             max_try = self.max_try
+            response = []
             while max_try > 0:
-                response = self.chat_session.get_model_response(self_refine_prompt, "sql")
+                try:
+                    response = self.chat_session.get_model_response(self_refine_prompt, "sql")
+                except Exception as e:
+                    print(f"{self.sql_id}: LLM call failed in self_refine: {e}")
+                    break
                 if not isinstance(response, list) or len(response) != 1:
                     self_refine_prompt = "Please output one SQL only."
                 else:
@@ -310,11 +328,19 @@ class REFORCE:
         else:
             max_try = 3
             prompt += "Compare the SQL and results of each answer and choose one SQL as the correct answer and tell me the reason. Output the name of sql in ```plaintext\nxxx.sql``` format. You should not ignore 'plaintext'.\n"
-            response = chat_session.get_model_response(hard_cut(pre_info, 150000) + prompt, "plaintext")
+            try:
+                response = chat_session.get_model_response(hard_cut(pre_info, 150000) + prompt, "plaintext")
+            except Exception as e:
+                print(f"{logfile_path}: LLM call failed in vote_result: {e}")
+                return
             while max_try > 0:
                 if not response or not isinstance(response, list) or ".sql" not in response[0]:
                     print(logfile_path, response)
-                    chat_session.get_model_response("Please output the name of sql in ```plaintext\nxxx.sql``` format. You should not ignore 'plaintext'.", "plaintext")
+                    try:
+                        chat_session.get_model_response("Please output the name of sql in ```plaintext\nxxx.sql``` format. You should not ignore 'plaintext'.", "plaintext")
+                    except Exception as e:
+                        print(f"{logfile_path}: LLM call failed in vote_result retry: {e}")
+                        break
                 else:
                     break
                 max_try -= 1
@@ -353,7 +379,11 @@ def schema_linking(dictionaries, task_dict, example_path, chat_session_sl: Type[
         while max_iter > 0:
             chat_session_sl.init_messages()
             e = None
-            table_struct_response = chat_session_sl.get_model_response(prompt, "python")
+            try:
+                table_struct_response = chat_session_sl.get_model_response(prompt, "python")
+            except Exception as llm_err:
+                print(f"{eg_id}: LLM call failed in schema_linking: {llm_err}")
+                continue
             try:
                 table_names = ast.literal_eval(table_struct_response[0])
                 table_names = [name.split('.')[-1] for name in table_names]

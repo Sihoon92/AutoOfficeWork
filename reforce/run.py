@@ -94,7 +94,11 @@ def process_sql_data(sql_data):
     table_info = get_table_info(args.db_path, sql_data, agent_format.api, clear_des=True)
 
     # Determine answer format
-    format_csv, chat_session_format = agent_format.format_answer(task, chat_session_format)
+    try:
+        format_csv, chat_session_format = agent_format.format_answer(task, chat_session_format)
+    except Exception as e:
+        print(f"{sql_data}: LLM connection failed in format_answer: {e}")
+        return
 
     # Skip if context is too long
     if chat_session_format.get_message_len() > 200000:
