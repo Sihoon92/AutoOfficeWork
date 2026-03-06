@@ -342,7 +342,7 @@ class REFORCE:
                 if not response or not isinstance(response, list) or ".sql" not in response[0]:
                     print(logfile_path, response)
                     try:
-                        chat_session.get_model_response("Please output the name of sql in ```plaintext\nxxx.sql``` format. You should not ignore 'plaintext'.", "plaintext")
+                        response = chat_session.get_model_response("Please output the name of sql in ```plaintext\nxxx.sql``` format. You should not ignore 'plaintext'.", "plaintext")
                     except Exception as e:
                         print(f"{logfile_path}: LLM call failed in vote_result retry: {e}")
                         break
@@ -389,11 +389,14 @@ def schema_linking(dictionaries, task_dict, example_path, chat_session_sl: GPTCh
             except Exception as llm_err:
                 print(f"{eg_id}: LLM call failed in schema_linking: {llm_err}")
                 continue
+            if not table_struct_response:
+                continue
             try:
                 table_names = ast.literal_eval(table_struct_response[0])
                 table_names = [name.split('.')[-1] for name in table_names]
                 table_names_no_digit = [remove_digits(s) for s in table_names]
-            except Exception as e:
+            except Exception as err:
+                e = err
                 print(str(table_struct_response))
                 continue
             if table_names_no_digit != []:
