@@ -7,7 +7,7 @@ import os
 import ast
 import csv
 from prompt import Prompts
-from typing import Type
+from typing import Optional
 from tqdm import tqdm
 from chat import GPTChat
 
@@ -15,7 +15,7 @@ csv.field_size_limit(500000)
 
 
 class REFORCE:
-    def __init__(self, args, sql_data, search_directory, prompt_class: Type[Prompts], sql_env: Type[SqlEnv] = None, chat_session_pre: Type[GPTChat] = None, chat_session: Type[GPTChat] = None, log_save_path=None):
+    def __init__(self, args, sql_data, search_directory, prompt_class: Prompts, sql_env: Optional[SqlEnv] = None, chat_session_pre: Optional[GPTChat] = None, chat_session: Optional[GPTChat] = None, log_save_path=None):
         self.csv_save_name = "result.csv"
         self.sql_save_name = "result.sql"
         self.log_save_name = "log.log"
@@ -128,7 +128,7 @@ class REFORCE:
         logger.info("[Corrected SQL]\n" + self.chat_session_pre.messages[-1]['content'] + "\n[Corrected SQL]")
         return response
 
-    def format_answer(self, task, chat_session: Type[GPTChat]):
+    def format_answer(self, task, chat_session: GPTChat):
         format_prompt = self.prompt_class.get_format_prompt()
         response_csv = chat_session.get_model_response_txt("Task: " + task + format_prompt)
         return response_csv, chat_session
@@ -280,7 +280,7 @@ class REFORCE:
             logger.info("Max Iter, remove file")
         print(f"{self.sql_id}: chat_session len: {self.chat_session.get_message_len()}")
 
-    def vote_result(self, search_directory, task, chat_session: Type[GPTChat], sql_paths, table_info):
+    def vote_result(self, search_directory, task, chat_session: GPTChat, sql_paths, table_info):
         pre_info = f'Based on database info:\n{table_info}'
         prompt = f"The task is: {task}. Here are some candidate sqls and answers: \n"
         count = 0
@@ -358,7 +358,7 @@ class REFORCE:
             sql_env.close_db()
 
 
-def schema_linking(dictionaries, task_dict, example_path, chat_session_sl: Type[GPTChat], txt_len_threshold=100000):
+def schema_linking(dictionaries, task_dict, example_path, chat_session_sl: GPTChat, txt_len_threshold=100000):
     print("Doing schema linking")
     skip_flag = False
     for eg_id in tqdm(dictionaries):
