@@ -32,6 +32,7 @@ def hard_cut(str_e, length=0):
         if len(str_e) > length:
             str_e = str_e[:int(length)] + "\n"
         return str_e
+    return str_e
 
 
 def get_values_from_table(csv_data_str):

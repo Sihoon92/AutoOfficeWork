@@ -7,6 +7,7 @@ import os
 import ast
 import csv
 from prompt import Prompts
+from typing import Optional, cast
 from tqdm import tqdm
 from chat import GPTChat
 
@@ -14,7 +15,7 @@ csv.field_size_limit(500000)
 
 
 class REFORCE:
-    def __init__(self, args, sql_data, search_directory, prompt_class: Prompts, sql_env: SqlEnv = None, chat_session_pre: GPTChat = None, chat_session: GPTChat = None, log_save_path=None):
+    def __init__(self, args, sql_data, search_directory, prompt_class: Prompts, sql_env: Optional[SqlEnv] = None, chat_session_pre: Optional[GPTChat] = None, chat_session: Optional[GPTChat] = None, log_save_path=None):
         self.csv_save_name = "result.csv"
         self.sql_save_name = "result.sql"
         self.log_save_name = "log.log"
@@ -35,9 +36,9 @@ class REFORCE:
         self.max_try = 3
         self.csv_max_len = 500
 
-        self.sql_env = sql_env
-        self.chat_session_pre = chat_session_pre
-        self.chat_session = chat_session
+        self.sql_env: SqlEnv = cast(SqlEnv, sql_env)
+        self.chat_session_pre: GPTChat = cast(GPTChat, chat_session_pre)
+        self.chat_session: GPTChat = cast(GPTChat, chat_session)
 
     def execute_sqls(self, sqls, logger):
         result_dic_list = []
@@ -105,6 +106,7 @@ class REFORCE:
                 self.chat_session_pre.messages.append({"role": "user", "content": f"Successfully corrected. SQL:\n{corrected_sql}\nResults:\n{results}"})
                 logger.info("[Successfully corrected]\n" + self.chat_session_pre.messages[-1]['content'] + "\n[Successfully corrected]")
                 return result_dic_list
+        return result_dic_list
 
     def self_correct(self, sql, error, logger, simplify=False):
         prompt = f"Input sql:\n{sql}\nThe error information is:\n" + str(error) + "\nPlease correct it based on previous context and output the thinking process with only one sql query in ```sql``` format. Don't just analyze without SQL or output several SQLs.\n"
@@ -134,6 +136,7 @@ class REFORCE:
 
     def exploration(self, task, table_struct, table_info, logger):
         pre_info = ''
+        response_pre_txt = ''
         task = table_info + "\nTask: " + task + "\n"
         max_try = self.max_try
         while max_try > 0:
@@ -287,6 +290,9 @@ class REFORCE:
         # filter answer
         result = {}
         all_values = []
+        logfile_path = ''
+        sql_path_exist = ''
+        csv_path_exist = ''
         for v in sql_paths.values():
             if os.path.exists(os.path.join(search_directory, v)):
                 all_values.append(os.path.join(search_directory, v))
