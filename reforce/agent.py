@@ -7,7 +7,6 @@ import os
 import ast
 import csv
 from prompt import Prompts
-from typing import Optional
 from tqdm import tqdm
 from chat import GPTChat
 
@@ -15,7 +14,7 @@ csv.field_size_limit(500000)
 
 
 class REFORCE:
-    def __init__(self, args, sql_data, search_directory, prompt_class: Prompts, sql_env: Optional[SqlEnv] = None, chat_session_pre: Optional[GPTChat] = None, chat_session: Optional[GPTChat] = None, log_save_path=None):
+    def __init__(self, args, sql_data, search_directory, prompt_class: Prompts, sql_env: SqlEnv = None, chat_session_pre: GPTChat = None, chat_session: GPTChat = None, log_save_path=None):
         self.csv_save_name = "result.csv"
         self.sql_save_name = "result.sql"
         self.log_save_name = "log.log"
