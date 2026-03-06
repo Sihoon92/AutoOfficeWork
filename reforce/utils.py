@@ -67,7 +67,7 @@ def initialize_logger(log_path, logger_name=None):
         logger_name = threading.current_thread().name
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
-    file_handler = logging.FileHandler(log_path, mode='w')
+    file_handler = logging.FileHandler(log_path, mode='w', encoding='utf-8')
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'

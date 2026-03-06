@@ -64,7 +64,8 @@ def execute(task, table_info, args, csv_save_path, log_save_path, sql_save_path,
     if max_try <= 0:
         print(f"{sql_data + '/' + log_save_path} Inadequate preparation, skip")
         return
-    print(f"{sql_data + '/' + log_save_path}: chat_session_pre len: {chat_session_pre.get_message_len()}")
+    if chat_session_pre is not None:
+        print(f"{sql_data + '/' + log_save_path}: chat_session_pre len: {chat_session_pre.get_message_len()}")
     csv_save_path = os.path.join(search_directory, csv_save_path)
     sql_save_path = os.path.join(search_directory, sql_save_path)
 
@@ -104,6 +105,7 @@ def process_sql_data(sql_data):
     table_info = get_table_info(args.db_path, sql_data, agent_format.api, clear_des=True)
 
     # Determine answer format
+    assert chat_session_format is not None
     try:
         format_csv, chat_session_format = agent_format.format_answer(task, chat_session_format)
     except Exception as e:
@@ -155,7 +157,7 @@ def process_sql_data(sql_data):
     print(f"Time for {sql_data}: {int((time.time() - start_time) // 60)} min")
 
 
-def main(args_in):
+def main(args_in: argparse.Namespace):
     global args, prompt_all, dictionaries, task_dict
     args = args_in
 
@@ -172,6 +174,7 @@ def main(args_in):
     if args.schema_linking_only:
         return
 
+    assert dictionaries is not None
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.num_workers) as executor:
         list(executor.map(process_sql_data, dictionaries))
 
