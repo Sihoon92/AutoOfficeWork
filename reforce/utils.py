@@ -24,7 +24,7 @@ def extract_all_blocks(main_content, code_format):
 
         start = sql_query_end + len("```")
 
-        return sql_blocks
+    return sql_blocks
 
 
 def hard_cut(str_e, length=0):
