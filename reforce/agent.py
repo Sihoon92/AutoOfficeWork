@@ -381,9 +381,11 @@ def schema_linking(dictionaries, task_dict, example_path, chat_session_sl: GPTCh
         prompt = f"Table information: {table_info}\nTask: {task}\nConsider which tables are related to the task. Remove unnecessary tables in {table_struct} and answer table names in ```python``` format in a list.\n"
 
         max_iter = 3
+        e: Exception | None = None
+        table_names: list = []
+        table_names_no_digit: list = []
         while max_iter > 0:
             chat_session_sl.init_messages()
-            e = None
             try:
                 table_struct_response = chat_session_sl.get_model_response(prompt, "python")
             except Exception as llm_err:
