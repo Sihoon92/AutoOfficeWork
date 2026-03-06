@@ -18,13 +18,15 @@ except ImportError:
     pass
 
 # Global args and shared state (set in __main__)
-args = None
-prompt_all = None
-dictionaries = None
-task_dict = None
+args: argparse.Namespace | None = None
+prompt_all: Prompts | None = None
+dictionaries: list | None = None
+task_dict: dict | None = None
 
 
 def execute(task, table_info, args, csv_save_path, log_save_path, sql_save_path, search_directory, format_csv, sql_data):
+    assert prompt_all is not None
+
     if args.rerun:
         if os.path.exists(os.path.join(search_directory, sql_save_path)):
             return
@@ -48,6 +50,8 @@ def execute(task, table_info, args, csv_save_path, log_save_path, sql_save_path,
     sql_env = SqlEnv()
 
     # Initialize chat sessions
+    chat_session_pre: GPTChat | None = None
+    chat_session: GPTChat | None = None
     if args.model:
         chat_session_pre = GPTChat(args.azure, args.pre_model, temperature=args.temperature)
         chat_session = GPTChat(args.azure, args.pre_model, temperature=args.temperature)
@@ -70,7 +74,12 @@ def execute(task, table_info, args, csv_save_path, log_save_path, sql_save_path,
 
 
 def process_sql_data(sql_data):
+    assert args is not None
+    assert task_dict is not None
+    assert prompt_all is not None
+
     start_time = time.time()
+    chat_session_format: GPTChat | None = None
     if args.model:
         chat_session_format = GPTChat(args.azure, args.pre_model, temperature=args.temperature)
     print(sql_data)

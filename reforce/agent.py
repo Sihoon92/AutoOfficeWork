@@ -349,7 +349,7 @@ class REFORCE:
                 else:
                     break
                 max_try -= 1
-            if max_try == 0:
+            if max_try == 0 or not response or not isinstance(response, list):
                 print(f"{logfile_path} Empty")
                 return
             with open(os.path.join(search_directory, response[0].strip())) as f:
